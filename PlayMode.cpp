@@ -104,33 +104,36 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		} else if (evt.key.keysym.sym == SDLK_w) {
 			up.pressed = false;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_s) {
-			down.pressed = false;
-			return true;
 		}
-	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
-		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
-			SDL_SetRelativeMouseMode(SDL_TRUE);
-			return true;
+ else if (evt.key.keysym.sym == SDLK_s) {
+ down.pressed = false;
+ return true;
 		}
-	} else if (evt.type == SDL_MOUSEMOTION) {
-		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-			glm::vec2 motion = glm::vec2(
-				evt.motion.xrel / float(window_size.y),
-				-evt.motion.yrel / float(window_size.y)
-			);
-			glm::vec3 up = walkmesh->to_world_smooth_normal(player.at);
-			player.transform->rotation = glm::angleAxis(-motion.x * player.camera->fovy, up) * player.transform->rotation;
+	}
+ else if (evt.type == SDL_MOUSEBUTTONDOWN) {
+ if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
+	 SDL_SetRelativeMouseMode(SDL_TRUE);
+	 return true;
+ }
+	}
+ else if (evt.type == SDL_MOUSEMOTION) {
+ if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
+	 glm::vec2 motion = glm::vec2(
+		 evt.motion.xrel / float(window_size.y),
+		 -evt.motion.yrel / float(window_size.y)
+	 );
+	 glm::vec3 up = walkmesh->to_world_smooth_normal(player.at);
+	 player.transform->rotation = glm::angleAxis(-motion.x * player.camera->fovy, up) * player.transform->rotation;
 
-			float pitch = glm::pitch(player.camera->transform->rotation);
-			pitch += motion.y * player.camera->fovy;
-			//camera looks down -z (basically at the player's feet) when pitch is at zero.
-			pitch = std::min(pitch, 0.95f * 3.1415926f);
-			pitch = std::max(pitch, 0.05f * 3.1415926f);
-			player.camera->transform->rotation = glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+	 float pitch = glm::pitch(player.camera->transform->rotation);
+	 pitch += motion.y * player.camera->fovy;
+	 //camera looks down -z (basically at the player's feet) when pitch is at zero.
+	 pitch = std::min(pitch, 0.95f * 3.1415926f);
+	 pitch = std::max(pitch, 0.05f * 3.1415926f);
+	 player.camera->transform->rotation = glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f));
 
-			return true;
-		}
+	 return true;
+ }
 	}
 
 	return false;
@@ -142,9 +145,9 @@ void PlayMode::update(float elapsed) {
 		//combine inputs into a move:
 		constexpr float PlayerSpeed = 3.0f;
 		glm::vec2 move = glm::vec2(0.0f);
-		if (left.pressed && !right.pressed) move.x =-1.0f;
+		if (left.pressed && !right.pressed) move.x = -1.0f;
 		if (!left.pressed && right.pressed) move.x = 1.0f;
-		if (down.pressed && !up.pressed) move.y =-1.0f;
+		if (down.pressed && !up.pressed) move.y = -1.0f;
 		if (!down.pressed && up.pressed) move.y = 1.0f;
 
 		//make it so that moving diagonally doesn't go faster:
@@ -175,13 +178,14 @@ void PlayMode::update(float elapsed) {
 				player.at = end;
 				//rotate step to follow surface:
 				remain = rotation * remain;
-			} else {
+			}
+			else {
 				//ran into a wall, bounce / slide along it:
-				glm::vec3 const &a = walkmesh->vertices[player.at.indices.x];
-				glm::vec3 const &b = walkmesh->vertices[player.at.indices.y];
-				glm::vec3 const &c = walkmesh->vertices[player.at.indices.z];
-				glm::vec3 along = glm::normalize(b-a);
-				glm::vec3 normal = glm::normalize(glm::cross(b-a, c-a));
+				glm::vec3 const& a = walkmesh->vertices[player.at.indices.x];
+				glm::vec3 const& b = walkmesh->vertices[player.at.indices.y];
+				glm::vec3 const& c = walkmesh->vertices[player.at.indices.z];
+				glm::vec3 along = glm::normalize(b - a);
+				glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
 				glm::vec3 in = glm::cross(normal, along);
 
 				//check how much 'remain' is pointing out of the triangle:
@@ -189,7 +193,8 @@ void PlayMode::update(float elapsed) {
 				if (d < 0.0f) {
 					//bounce off of the wall:
 					remain += (-1.25f * d) * in;
-				} else {
+				}
+				else {
 					//if it's just pointing along the edge, bend slightly away from wall:
 					remain += 0.01f * d * in;
 				}
@@ -203,6 +208,11 @@ void PlayMode::update(float elapsed) {
 		//update player's position to respect walking:
 		player.transform->position = walkmesh->to_world_point(player.at);
 
+		std::cout << player.at.indices[0] << " " << player.at.indices[1] << " " << player.at.indices[2] << "\n";
+		if (player.at.indices[0] >= 95 && player.at.indices[1] >= 95 && player.at.indices[2] >= 95 &&
+			player.at.indices[0] < 100 && player.at.indices[1] < 100 && player.at.indices[2] < 100) {
+			win = true;
+		}
 		{ //update player's rotation to respect local (smooth) up-vector:
 			
 			glm::quat adjust = glm::rotation(
@@ -270,6 +280,18 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+		if (win) {
+			constexpr float H = 0.9f;
+			lines.draw_text("Nice!",
+				glm::vec3(-aspect / 2, -aspect / 2, 0.0f),
+				glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+				glm::u8vec4(0x00, 0xff, 0xff, 0xff));
+			float ofs = 2.0f / drawable_size.y;
+			lines.draw_text("Nice!",
+				glm::vec3(-aspect / 2 + ofs, -aspect / 2 + ofs, 0.0f),
+				glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+				glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+		}
 	}
 	GL_ERRORS();
 }
